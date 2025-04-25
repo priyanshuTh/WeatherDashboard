@@ -8,7 +8,7 @@
 
 ## 📺 Demo
 
-**Link:**
+**Link:https://priyanshuth.github.io/WeatherHub/**
 
 ![WeatherHub Screenshot](docs/screenshot.png)
 
