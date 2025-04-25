@@ -41,7 +41,7 @@
 1. **Clone the repo**:
    ```bash
    git clone https://github.com/priyanshuTh/WeatherHub.git
-   cd weatherhub
+   cd weatherDashboard
    ```
 2. **Configure API Key**:
    - Open `src/js/api.js`
