@@ -6,7 +6,7 @@
 
 ---
 
-[## 📺 Demo](https://priyanshuth.github.io/WeatherHub/)
+## [📺 Demo](https://priyanshuth.github.io/WeatherHub/)
 
 ![WeatherHub Screenshot](docs/screenshot.png)
 
