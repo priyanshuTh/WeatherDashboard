@@ -1,4 +1,4 @@
-# WeatherHub
+# WeatherDashboard
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
@@ -6,7 +6,7 @@
 
 ---
 
-## [📺 Demo](https://priyanshuth.github.io/WeatherHub/)
+## [📺 Demo](https://priyanshuth.github.io/WeatherDashboard/)
 
 ![WeatherHub Screenshot](docs/srceenshot.png)
 
