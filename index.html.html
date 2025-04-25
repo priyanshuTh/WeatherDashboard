@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Global Weather Dashboard showing real-time weather information">
+    <title>Global Weather Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"
+        integrity="sha384-3B6NwesSXE7YJlcLI9RpRqGf2p/EfVyzvpBFmMoRfp/p/MRUIm4ER00DjLJWVlyf" crossorigin="anonymous">
+    <link rel="stylesheet" href="World_TandW.css"> <!-- Removed media="print" onload attribute -->
+</head>
+
+<body>
+    <div class="dashboard-container" role="main">
+        <aside class="sidebar" role="complementary">
+            <div class="logo">
+                <i class="fas fa-cloud-sun" aria-hidden="true"></i>
+                <h1>WeatherHub</h1>
+            </div>
+            <div class="search-container">
+                <i class="fas fa-search search-icon" aria-hidden="true"></i>
+                <input type="text" class="search-input" placeholder="Search location..." aria-label="Search locations">
+            </div>
+            <div class="location-list" role="list">
+                <!-- Location list will be populated by JavaScript -->
+            </div>
+        </aside>
+
+        <main>
+            <div id="weatherGrid" class="weather-grid">
+                <div class="loading-message">Loading weather data...</div>
+                <div class="error-message" style="display: none;"></div>
+            </div>
+        </main>
+    </div>
+    <script src="world_tandw.js" defer></script>
+</body>
+
+</html>
