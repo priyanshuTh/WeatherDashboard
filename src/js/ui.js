@@ -1,128 +1,160 @@
 import * as U from "./utils.js";
 
 // Chart instances
-const charts = { temperature: null, precipitation: null, wind: null };
+const charts = {
+  temperature: null,
+  precipitation: null,
+  wind: null,
+  humidity: null,
+};
+
+// Map instance
+let map = null;
+let mapMarkers = [];
 
 // Build a weather card for a city
 export function buildCityCard(city) {
   const card = document.createElement("div");
-  card.className = "weather-card";
+  card.className =
+    "bg-secondary-dark/80 backdrop-blur-md rounded-xl overflow-hidden shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl cursor-pointer border border-white/10 flex flex-col relative animate-fadeInUp weather-card";
   card.id = city.id;
+  card.dataset.lat = city.lat;
+  card.dataset.lon = city.lon;
+
+  // Add top border gradient
+  card.innerHTML = `<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-blue to-accent-purple z-10 transition-all duration-300 group-hover:h-1.5"></div>`;
 
   const data = city.weather;
   const icon = `${U.iconBase}${data.weather[0].icon}@2x.png`;
   const temp = Math.round(data.main.temp);
   const feelsLike = Math.round(data.main.feels_like);
 
-  card.innerHTML = /* html */ `
-    <div class="landmark-container">
-      <img src="${city.landmark}" class="landmark-image" alt="${city.name}" 
-           onerror="this.src='${
-             U.placeholderLandmark
-           }';this.classList.add('error')">
-      <div class="landmark-caption">
-        <span>${city.name}</span>
-      </div>
+  // Create landmark container
+  const landmarkContainer = document.createElement("div");
+  landmarkContainer.className =
+    "relative w-full h-44 overflow-hidden bg-primary-dark";
+  landmarkContainer.innerHTML = `
+    <img src="${city.landmark}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
+         alt="${city.name}" 
+         onerror="this.src='${U.placeholderLandmark}';this.classList.add('error')">
+    <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
+      <span class="text-lg font-semibold">${city.name}</span>
+    </div>
+  `;
+
+  // Create card content
+  const cardContent = document.createElement("div");
+  cardContent.className = "p-6 flex-grow flex flex-col";
+
+  // City info
+  const locationInfo = document.createElement("div");
+  locationInfo.className = "flex justify-between items-start mb-4";
+  locationInfo.innerHTML = `
+    <div class="flex items-center gap-2">
+      <h2 class="text-2xl font-semibold m-0">${city.name}</h2>
+      ${
+        city.isCapital
+          ? '<span class="bg-accent-gold text-primary-dark px-2 py-1 rounded text-xs font-semibold">Capital</span>'
+          : ""
+      }
+    </div>
+    <img src="${city.flag}" class="w-6 h-4 rounded shadow" alt="${
+    city.country
+  } flag" 
+         onerror="this.src='${U.placeholderFlag}';this.classList.add('error')">
+  `;
+
+  // Country name
+  const countryName = document.createElement("div");
+  countryName.className = "text-text-secondary mb-4";
+  countryName.textContent = city.country;
+
+  // Weather main
+  const weatherMain = document.createElement("div");
+  weatherMain.className = "flex items-center justify-between mb-6";
+  weatherMain.innerHTML = `
+    <div class="text-4xl font-bold flex items-center gap-2">
+      ${temp}°C
+      <img class="w-16 h-16 filter drop-shadow" src="${icon}" alt="${data.weather[0].description}">
+    </div>
+    <div class="text-right text-text-secondary text-lg capitalize">
+      ${data.weather[0].description}
+    </div>
+  `;
+
+  // Weather details
+  const weatherDetails = document.createElement("div");
+  weatherDetails.className =
+    "grid grid-cols-2 gap-4 bg-white/5 p-4 rounded-lg mt-auto";
+  weatherDetails.innerHTML = `
+    <div class="flex flex-col gap-1">
+      <span class="text-text-secondary text-xs uppercase tracking-wider">Feels Like</span>
+      <span class="font-medium text-lg">${feelsLike}°C</span>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-text-secondary text-xs uppercase tracking-wider">Humidity</span>
+      <span class="font-medium text-lg">${data.main.humidity}%</span>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-text-secondary text-xs uppercase tracking-wider">Wind</span>
+      <span class="font-medium text-lg">${Math.round(
+        data.wind.speed
+      )} m/s ${U.getWindDirection(data.wind.deg)}</span>
+    </div>
+    <div class="flex flex-col gap-1">
+      <span class="text-text-secondary text-xs uppercase tracking-wider">Pressure</span>
+      <span class="font-medium text-lg">${data.main.pressure} hPa</span>
     </div>
     
-    <div class="card-content">
-      <div class="location-info">
-        <div class="city-name">
-          <h2>${city.name}</h2>
-          ${city.isCapital ? '<span class="capital-badge">Capital</span>' : ""}
-        </div>
-        <img src="${city.flag}" class="mini-flag" alt="${city.country} flag" 
-             onerror="this.src='${
-               U.placeholderFlag
-             }';this.classList.add('error')">
+    <div class="col-span-2 flex justify-between border-t border-white/10 pt-3 mt-2">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-sun text-accent-gold"></i>
+        <span>${city.sunrise}</span>
       </div>
-      
-      <div class="country-name">${city.country}</div>
-      
-      <div class="weather-main">
-        <div class="temperature">
-          ${temp}°C
-          <img class="weather-icon" src="${icon}" alt="${
-    data.weather[0].description
-  }">
-        </div>
-        <div class="weather-description">
-          ${data.weather[0].description}
-        </div>
-      </div>
-      
-      <div class="weather-details">
-        <div class="detail-item">
-          <span class="detail-label">Feels Like</span>
-          <span class="detail-value">${feelsLike}°C</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Humidity</span>
-          <span class="detail-value">${data.main.humidity}%</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Wind</span>
-          <span class="detail-value">${Math.round(data.wind.speed)} m/s</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Pressure</span>
-          <span class="detail-value">${data.main.pressure} hPa</span>
-        </div>
-        
-        <div class="sun-times">
-          <div class="sunrise">
-            <i class="fas fa-sun"></i>
-            <span>${city.sunrise}</span>
-          </div>
-          <div class="sunset">
-            <i class="fas fa-moon"></i>
-            <span>${city.sunset}</span>
-          </div>
-        </div>
+      <div class="flex items-center gap-2">
+        <i class="fas fa-moon text-accent-gold"></i>
+        <span>${city.sunset}</span>
       </div>
     </div>
   `;
 
+  // Add action buttons for forecast and map
+  const cardButtons = document.createElement("div");
+  cardButtons.className = "card-buttons mt-4 flex gap-2";
+  cardButtons.innerHTML = `
+    <button class="card-btn forecast-btn" data-action="forecast">
+      <i class="fas fa-chart-line mr-2"></i> Forecast
+    </button>
+    <button class="card-btn map-btn" data-action="map">
+      <i class="fas fa-map-marker-alt mr-2"></i> View Map
+    </button>
+  `;
+
+  // Append all elements to the card
+  cardContent.appendChild(locationInfo);
+  cardContent.appendChild(countryName);
+  cardContent.appendChild(weatherMain);
+  cardContent.appendChild(weatherDetails);
+  cardContent.appendChild(cardButtons);
+
+  card.appendChild(landmarkContainer);
+  card.appendChild(cardContent);
+
+  // Add event listeners for the buttons
+  const forecastBtn = cardButtons.querySelector('[data-action="forecast"]');
+  const mapBtn = cardButtons.querySelector('[data-action="map"]');
+
+  forecastBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    document.dispatchEvent(new CustomEvent("openForecast", { detail: city }));
+  });
+
+  mapBtn.addEventListener("click", (e) => {
+    e.stopPropagation(); // Prevent triggering the card click
+    document.dispatchEvent(new CustomEvent("openMap", { detail: city }));
+  });
+
   return card;
-}
-
-// Loading and error displays
-export function showLoading(gridElement) {
-  const loadingEl = document.querySelector(".loading-container");
-  if (loadingEl) loadingEl.style.display = "block";
-
-  hideError();
-
-  if (gridElement) {
-    gridElement.style.opacity = "0.7";
-    gridElement.style.pointerEvents = "none";
-  }
-}
-
-export function hideLoading(gridElement) {
-  const loadingEl = document.querySelector(".loading-container");
-  if (loadingEl) loadingEl.style.display = "none";
-
-  if (gridElement) {
-    gridElement.style.opacity = "1";
-    gridElement.style.pointerEvents = "auto";
-  }
-}
-
-export function showError(message) {
-  hideLoading();
-
-  const errorEl = document.querySelector(".error-message");
-  if (errorEl) {
-    const errorTextEl = document.getElementById("errorText");
-    if (errorTextEl) errorTextEl.textContent = message;
-    errorEl.style.display = "block";
-  }
-}
-
-export function hideError() {
-  const errorEl = document.querySelector(".error-message");
-  if (errorEl) errorEl.style.display = "none";
 }
 
 // Toast notification
@@ -133,32 +165,16 @@ export function toast(message) {
   const messageEl = document.getElementById("toastMessage");
   if (messageEl) messageEl.textContent = message;
 
-  const bsToast = new bootstrap.Toast(toastEl);
-  bsToast.show();
-}
-
-// Recent searches
-export function renderRecentSearches(searches, container) {
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  if (!searches || searches.length === 0) {
-    container.innerHTML = '<div class="no-recent">No recent searches</div>';
-    return;
+  // Create a Bootstrap toast instance if not already
+  let bsToast = bootstrap.Toast.getInstance(toastEl);
+  if (!bsToast) {
+    bsToast = new bootstrap.Toast(toastEl, {
+      autohide: true,
+      delay: 3000,
+    });
   }
 
-  searches.forEach((search) => {
-    const item = document.createElement("div");
-    item.className = "recent-item";
-    item.innerHTML = `
-      <i class="fas fa-history"></i>
-      <span>${search.name}${search.country ? `, ${search.country}` : ""}</span>
-    `;
-
-    container.appendChild(item);
-    return item;
-  });
+  bsToast.show();
 }
 
 // Process forecast data
@@ -182,6 +198,7 @@ export function processForecastData(forecast) {
       precipitation: item.rain ? item.rain["3h"] || 0 : 0,
       windSpeed: Math.round(item.wind.speed),
       windDirection: item.wind.deg,
+      humidity: item.main.humidity,
       weather: item.weather[0],
       icon: item.weather[0].icon,
     });
@@ -247,8 +264,11 @@ export function drawTemperatureChart(data) {
   }
 
   // Create new chart
-  const ctx = document.getElementById("temperatureChart").getContext("2d");
-  charts.temperature = new Chart(ctx, {
+  const ctx = document.getElementById("temperatureChart");
+  if (!ctx) return null;
+
+  const context = ctx.getContext("2d");
+  charts.temperature = new Chart(context, {
     type: "line",
     data: {
       datasets: datasets,
@@ -344,8 +364,11 @@ export function drawPrecipitationChart(data) {
   }
 
   // Create new chart
-  const ctx = document.getElementById("precipitationChart").getContext("2d");
-  charts.precipitation = new Chart(ctx, {
+  const ctx = document.getElementById("precipitationChart");
+  if (!ctx) return null;
+
+  const context = ctx.getContext("2d");
+  charts.precipitation = new Chart(context, {
     type: "bar",
     data: {
       labels: labels,
@@ -439,8 +462,11 @@ export function drawWindChart(data) {
   }
 
   // Create new chart
-  const ctx = document.getElementById("windChart").getContext("2d");
-  charts.wind = new Chart(ctx, {
+  const ctx = document.getElementById("windChart");
+  if (!ctx) return null;
+
+  const context = ctx.getContext("2d");
+  charts.wind = new Chart(context, {
     type: "bar",
     data: {
       labels: labels,
@@ -506,6 +532,117 @@ export function drawWindChart(data) {
   return charts.wind;
 }
 
+// Draw humidity chart
+export function drawHumidityChart(data) {
+  // Get the first 5 days
+  const days = Object.keys(data.hourly).slice(0, 5);
+  const datasets = [];
+
+  // Create a dataset for each day
+  days.forEach((day, index) => {
+    const dayData = data.hourly[day];
+    const formattedDay = new Date(day).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+
+    // Map humidity data for each hour
+    const humidityData = dayData.map((hourData) => ({
+      x: hourData.hour,
+      y: hourData.humidity,
+    }));
+
+    // Add dataset for this day
+    datasets.push({
+      label: formattedDay,
+      data: humidityData,
+      borderColor: U.getChartColor(index),
+      backgroundColor: U.getChartColor(index),
+      tension: 0.3,
+      pointBackgroundColor: U.getChartColor(index),
+      pointRadius: 4,
+    });
+  });
+
+  // Destroy previous chart if exists
+  if (charts.humidity) {
+    charts.humidity.destroy();
+  }
+
+  // Create new chart
+  const ctx = document.getElementById("humidityChart");
+  if (!ctx) return null;
+
+  const context = ctx.getContext("2d");
+  charts.humidity = new Chart(context, {
+    type: "line",
+    data: {
+      datasets: datasets,
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: "index",
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: {
+            color: "rgba(255, 255, 255, 0.7)",
+            usePointStyle: true,
+          },
+        },
+        tooltip: {
+          backgroundColor: "rgba(15, 23, 42, 0.8)",
+          callbacks: {
+            label: function (context) {
+              return `${context.dataset.label}: ${context.parsed.y}%`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: "Hour",
+            color: "rgba(255, 255, 255, 0.7)",
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.1)",
+          },
+          ticks: {
+            color: "rgba(255, 255, 255, 0.7)",
+          },
+        },
+        y: {
+          min: 0,
+          max: 100,
+          title: {
+            display: true,
+            text: "Humidity (%)",
+            color: "rgba(255, 255, 255, 0.7)",
+          },
+          grid: {
+            color: "rgba(255, 255, 255, 0.1)",
+          },
+          ticks: {
+            color: "rgba(255, 255, 255, 0.7)",
+            callback: function (value) {
+              return value + "%";
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return charts.humidity;
+}
+
 // Render 5-day forecast
 export function renderDailyForecast(data) {
   const dailyForecastElement = document.getElementById("dailyForecast");
@@ -523,13 +660,18 @@ export function renderDailyForecast(data) {
     });
 
     const dayCard = document.createElement("div");
-    dayCard.className = "daily-item";
+    dayCard.className =
+      "bg-white/5 rounded-lg p-4 text-center transition-all duration-300 hover:bg-white/10 hover:-translate-y-1 hover:shadow-lg";
     dayCard.innerHTML = `
-      <div class="day-name">${dayName}</div>
-      <div class="day-date">${monthDay}</div>
-      <img src="${U.iconBase}${day.icon}@2x.png" class="day-icon" alt="${day.weather.description}">
-      <div class="day-temp">${day.temp}°C</div>
-      <div class="day-desc">${day.weather.description}</div>
+      <div class="font-semibold">${dayName}</div>
+      <div class="text-sm text-text-secondary">${monthDay}</div>
+      <img src="${U.iconBase}${day.icon}@2x.png" class="w-12 h-12 mx-auto my-2" alt="${day.weather.description}">
+      <div class="text-xl font-bold my-2">${day.temp}°C</div>
+      <div class="text-sm text-text-secondary">${day.weather.description}</div>
+      <div class="mt-2 text-xs text-text-secondary">
+        <span class="block"><i class="fas fa-wind mr-1"></i> ${day.windSpeed} m/s</span>
+        <span class="block"><i class="fas fa-tint mr-1"></i> ${day.humidity}%</span>
+      </div>
     `;
 
     dailyForecastElement.appendChild(dayCard);
@@ -539,64 +681,138 @@ export function renderDailyForecast(data) {
 // Switch between tabs in the forecast modal
 export function switchTab(tabName) {
   // Update active tab button
-  const tabButtons = document.querySelectorAll(".nav-link");
+  const tabButtons = document.querySelectorAll("[data-tab]");
   tabButtons.forEach((btn) => {
-    if (btn.id === `${tabName}-tab`) {
-      btn.classList.add("active");
-      btn.setAttribute("aria-selected", "true");
-    } else {
-      btn.classList.remove("active");
-      btn.setAttribute("aria-selected", "false");
-    }
+    const isActive = btn.getAttribute("data-tab") === tabName;
+    btn.classList.toggle("active", isActive);
+    btn.classList.toggle("text-accent-blue", isActive);
+    btn.classList.toggle("border-b-2", isActive);
+    btn.classList.toggle("border-accent-blue", isActive);
+    btn.classList.toggle("text-text-secondary", !isActive);
+    btn.classList.toggle("border-transparent", !isActive);
   });
 
   // Update visible tab content
-  const tabContents = document.querySelectorAll(".tab-pane");
-  tabContents.forEach((content) => {
-    if (content.id === `${tabName}Tab`) {
+  document.querySelectorAll(".tab-pane").forEach((content) => {
+    if (content.id === tabName) {
       content.classList.add("show", "active");
+      content.classList.remove("hidden");
     } else {
       content.classList.remove("show", "active");
+      content.classList.add("hidden");
     }
   });
 }
 
 // Clean up chart resources
 export function destroyCharts() {
-  if (charts.temperature) {
-    charts.temperature.destroy();
-    charts.temperature = null;
-  }
+  Object.values(charts).forEach((chart) => {
+    if (chart) {
+      chart.destroy();
+    }
+  });
 
-  if (charts.precipitation) {
-    charts.precipitation.destroy();
-    charts.precipitation = null;
-  }
-
-  if (charts.wind) {
-    charts.wind.destroy();
-    charts.wind = null;
-  }
+  // Reset chart instances
+  charts.temperature = null;
+  charts.precipitation = null;
+  charts.wind = null;
+  charts.humidity = null;
 }
 
 // Modal control
-export function showModal(city) {
-  const modalTitle = document.getElementById("forecastTitle");
-  if (modalTitle) modalTitle.textContent = `${city} Weather Forecast`;
+export function showModal(modalId, title) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
 
-  const modalElement = document.getElementById("forecastModal");
-  if (modalElement) {
-    const bootstrapModal = new bootstrap.Modal(modalElement);
-    bootstrapModal.show();
+  // Set title if provided and element exists
+  if (title) {
+    const titleEl = modal.querySelector(".modal-title");
+    if (titleEl) titleEl.textContent = title;
+  }
+
+  // Use Bootstrap's modal API
+  const bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+}
+
+export function hideModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+
+  const bsModal = bootstrap.Modal.getInstance(modal);
+  if (bsModal) {
+    bsModal.hide();
   }
 }
 
-export function hideModal() {
-  const modalElement = document.getElementById("forecastModal");
-  if (modalElement) {
-    const bootstrapModal = bootstrap.Modal.getInstance(modalElement);
-    if (bootstrapModal) {
-      bootstrapModal.hide();
-    }
+// Map handling - Fixed to ensure proper English display and correct location
+export function initMap(city) {
+  const mapContainer = document.getElementById("mapContainer");
+  if (!mapContainer) return;
+
+  // Clear any existing map
+  mapContainer.innerHTML = "";
+  clearMapMarkers();
+
+  // Initialize the map if not already
+  if (!map) {
+    map = L.map("mapContainer").setView([city.lat, city.lon], 10);
+
+    // Add tile layer with language=en parameter to ensure English names
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+      language: "en",
+    }).addTo(map);
+  } else {
+    // Just update the view if map exists
+    map.setView([city.lat, city.lon], 10);
   }
+
+  // Add marker for the city with accurate coordinates
+  const marker = L.marker([city.lat, city.lon]).addTo(map);
+
+  // Add popup with city info
+  marker.bindPopup(U.getMapPopupContent(city)).openPopup();
+
+  // Add to markers array for later cleanup
+  mapMarkers.push(marker);
+
+  // Force map to update size (needed after modal opens)
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 300);
+}
+
+export function addMapMarkers(cities) {
+  if (!map) return;
+
+  // Clear existing markers
+  clearMapMarkers();
+
+  // Add a marker for each city
+  cities.forEach((city) => {
+    const marker = L.marker([city.lat, city.lon]).addTo(map);
+    marker.bindPopup(U.getMapPopupContent(city));
+    mapMarkers.push(marker);
+  });
+
+  // Fit map to show all markers
+  if (mapMarkers.length > 1) {
+    const group = new L.featureGroup(mapMarkers);
+    map.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+export function clearMapMarkers() {
+  if (!map) return;
+
+  // Remove all markers from the map
+  mapMarkers.forEach((marker) => {
+    map.removeLayer(marker);
+  });
+
+  // Clear the markers array
+  mapMarkers = [];
 }

@@ -10,7 +10,10 @@ export const placeholderLandmark =
 export function formatTime(ts, tz, opts = {}) {
   const base = { hour: "2-digit", minute: "2-digit", hour12: true, ...opts };
   try {
-    return new Date(ts).toLocaleTimeString("en-US", { timeZone: tz, ...base });
+    return new Date(ts).toLocaleTimeString("en-US", {
+      timeZone: tz || "UTC",
+      ...base,
+    });
   } catch (error) {
     console.error("Error formatting time:", error);
     return new Date(ts).toLocaleTimeString("en-US", base);
@@ -21,7 +24,7 @@ export function formatTime(ts, tz, opts = {}) {
 export function getLocalTime(timeZone) {
   try {
     return new Date().toLocaleTimeString("en-US", {
-      timeZone,
+      timeZone: timeZone || "UTC",
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
@@ -36,6 +39,21 @@ export function getLocalTime(timeZone) {
       minute: "2-digit",
       hour12: true,
     });
+  }
+}
+
+// Get formatted date
+export function formatDate(timestamp, timezone) {
+  try {
+    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+      timeZone: timezone || "UTC",
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return new Date(timestamp * 1000).toLocaleDateString("en-US");
   }
 }
 
@@ -57,17 +75,16 @@ export function aqiText(aqi) {
 }
 
 export function aqiClass(aqi) {
-  if (aqi === null || aqi === undefined) return "aqi-unknown";
-  return (
-    [
-      "aqi-unknown",
-      "aqi-good",
-      "aqi-fair",
-      "aqi-moderate",
-      "aqi-poor",
-      "aqi-very-poor",
-    ][aqi] || "aqi-unknown"
-  );
+  const classes = {
+    0: "bg-white/5 border-l-4 border-gray-400",
+    1: "bg-aqi-good/10 border-l-4 border-aqi-good",
+    2: "bg-aqi-fair/10 border-l-4 border-aqi-fair",
+    3: "bg-aqi-moderate/10 border-l-4 border-aqi-moderate",
+    4: "bg-aqi-poor/10 border-l-4 border-aqi-poor",
+    5: "bg-aqi-very-poor/10 border-l-4 border-aqi-very-poor",
+  };
+
+  return classes[aqi] || classes[0];
 }
 
 // Chart colors
@@ -115,6 +132,26 @@ export const landmarkImages = {
     "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
   Beijing:
     "https://images.unsplash.com/photo-1508804185872-d7badad00f7d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Delhi:
+    "https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Mumbai:
+    "https://images.unsplash.com/photo-1566552881560-0be862a7c445?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Bangkok:
+    "https://images.unsplash.com/photo-1508009603885-50cf7c8dd0d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Cairo:
+    "https://images.unsplash.com/photo-1553913861-c0fddf2619ee?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Dubai:
+    "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Singapore:
+    "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Istanbul:
+    "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Moscow:
+    "https://images.unsplash.com/photo-1513326738677-b964603b136d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Stockholm:
+    "https://images.unsplash.com/photo-1509356843151-3e7d96241e11?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+  Toronto:
+    "https://images.unsplash.com/photo-1517090504586-fde019d8ee91?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
 };
 
 // Capital cities with their country codes
@@ -132,6 +169,19 @@ export const capitalCities = {
   Brasília: "BR",
   Canberra: "AU",
   "New Delhi": "IN",
+  Wellington: "NZ",
+  Cairo: "EG",
+  Dublin: "IE",
+  Oslo: "NO",
+  Stockholm: "SE",
+  Helsinki: "FI",
+  Athens: "GR",
+  Vienna: "AT",
+  Brussels: "BE",
+  Jakarta: "ID",
+  Bangkok: "TH",
+  Manila: "PH",
+  Seoul: "KR",
 };
 
 // Function to check if a city is a capital
@@ -142,6 +192,43 @@ export function isCapitalCity(cityName, countryCode) {
 // Function to get landmark image for a city
 export function getLandmarkForCity(cityName) {
   return landmarkImages[cityName] || placeholderLandmark;
+}
+
+// Weather condition to icon mapping
+export function getWeatherIcon(conditionCode) {
+  // Make sure we have the right format for the icon
+  if (!conditionCode) return "cloud"; // Default icon
+
+  const mapping = {
+    "01d": "sun", // Clear sky (day)
+    "01n": "moon", // Clear sky (night)
+    "02d": "cloud-sun", // Few clouds (day)
+    "02n": "cloud-moon", // Few clouds (night)
+    "03d": "cloud", // Scattered clouds
+    "03n": "cloud",
+    "04d": "clouds", // Broken clouds
+    "04n": "clouds",
+    "09d": "cloud-showers-heavy", // Shower rain
+    "09n": "cloud-showers-heavy",
+    "10d": "cloud-sun-rain", // Rain (day)
+    "10n": "cloud-moon-rain", // Rain (night)
+    "11d": "bolt", // Thunderstorm
+    "11n": "bolt",
+    "13d": "snowflake", // Snow
+    "13n": "snowflake",
+    "50d": "smog", // Mist
+    "50n": "smog",
+  };
+
+  return mapping[conditionCode] || "cloud-question";
+}
+
+// Wind direction as arrow icon
+export function getWindDirection(degrees) {
+  // Convert degrees to one of 8 basic directions
+  const directions = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"];
+  const index = Math.round(degrees / 45) % 8;
+  return directions[index];
 }
 
 // Local storage helpers
@@ -163,4 +250,29 @@ export function getFromLocalStorage(key, defaultValue = null) {
     console.error(`Error retrieving from localStorage: ${key}`, error);
     return defaultValue;
   }
+}
+
+// Generate Open Street Map URL
+export function getMapUrl(lat, lon) {
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=13/${lat}/${lon}`;
+}
+
+// Get a proper map popup content
+export function getMapPopupContent(city) {
+  if (!city) return "";
+
+  const temp = Math.round(city.weather.main.temp);
+  const condition = city.weather.weather[0].description;
+  const country = city.country || "";
+
+  return `
+    <div class="map-popup">
+      <h3 class="text-lg font-bold">${city.name}, ${country}</h3>
+      <div class="flex items-center mt-2">
+        <img src="${iconBase}${city.weather.weather[0].icon}@2x.png" class="w-12 h-12" alt="${condition}">
+        <span class="text-2xl font-bold">${temp}°C</span>
+      </div>
+      <p class="mt-1 capitalize">${condition}</p>
+    </div>
+  `;
 }

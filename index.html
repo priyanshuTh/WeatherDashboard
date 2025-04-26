@@ -15,43 +15,53 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="manifest" href="package.json">
+    <link rel="manifest" href="manifest.json">
 
     <!-- Custom Styles -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="src/css/style.css">
 </head>
 
-<body>
+<body class="bg-primary-dark text-text-primary font-sans">
     <div class="dashboard-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo" id="logoRefresh">
-                <i class="fas fa-cloud-sun"></i>
-                <h1>WeatherDashboard</h1>
+        <aside class="sidebar transition-all duration-300" id="sidebar">
+            <div class="logo cursor-pointer" id="logoRefresh">
+                <i class="fas fa-cloud-sun text-accent-blue text-2xl"></i>
+                <h1 class="text-xl font-bold m-0">WeatherDashboard</h1>
             </div>
 
-            <!-- sidebar‐toggle button for small screens -->
-            <div class="sidebar-toggle d-lg-none">
+            <!-- Sidebar‐toggle button for small screens -->
+            <button
+                class="sidebar-toggle fixed top-4 left-4 z-50 lg:hidden bg-accent-blue text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg"
+                id="sidebarToggle">
                 <i class="fas fa-bars"></i>
-            </div>
+            </button>
 
             <!-- Search -->
-            <div class="search-container">
-                <div class="input-group">
-                    <span class="input-group-text bg-transparent border-end-0">
-                        <i class="fas fa-search text-secondary"></i>
+            <div class="search-container mb-6">
+                <div
+                    class="input-group bg-white/5 rounded-lg overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg">
+                    <span class="input-group-text bg-transparent border-end-0 border-white/10">
+                        <i class="fas fa-search text-text-secondary"></i>
                     </span>
-                    <input type="text" class="form-control search-input border-start-0" placeholder="Search city..."
-                        aria-label="Search locations">
-                    <button class="btn btn-primary search-btn" type="button">
+                    <input type="text" id="searchInput"
+                        class="form-control search-input border-start-0 border-white/10 bg-transparent text-text-primary"
+                        placeholder="Search city, country or place..." aria-label="Search locations">
+                    <button class="btn btn-primary search-btn" type="button" id="searchBtn">
                         <i class="fas fa-arrow-right"></i>
                     </button>
+                </div>
+                <div class="search-info mt-2">
+                    <small class="text-text-secondary">Enter any location to get weather information</small>
                 </div>
             </div>
 
             <!-- Recent Searches -->
             <div class="recent-searches">
-                <h2><i class="fas fa-history me-2"></i>Recent Searches</h2>
+                <h2 class="text-text-secondary text-sm font-semibold mb-3 flex items-center">
+                    <i class="fas fa-history me-2"></i>Recent Searches
+                </h2>
                 <div class="recent-list" id="recentSearches">
                     <!-- Recent searches will be populated here -->
                 </div>
@@ -59,15 +69,16 @@
         </aside>
 
         <!-- Main content -->
-        <main>
+        <main class="flex-1">
             <div id="weatherGrid" class="weather-grid">
-                <div class="loading-container">
-                    <div class="spinner-border text-light" role="status">
+                <div class="loading-container flex flex-col items-center justify-center min-h-[300px] py-10"
+                    id="loadingContainer">
+                    <div class="spinner-border text-accent-blue" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="loading-text mt-3">Loading weather data...</p>
+                    <p class="loading-text mt-3 text-text-secondary">Loading weather data...</p>
                 </div>
-                <div class="alert alert-danger error-message" style="display:none;" role="alert">
+                <div class="alert alert-danger error-message hidden" id="errorMessage" role="alert">
                     <i class="fas fa-exclamation-circle me-2"></i>
                     <span id="errorText">An error occurred.</span>
                 </div>
@@ -77,14 +88,16 @@
 
     <!-- Toast for notifications -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-        <div id="weatherToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <i class="fas fa-info-circle me-2 text-primary"></i>
+        <div id="weatherToast" class="toast bg-secondary-dark border border-white/10 shadow-xl" role="alert"
+            aria-live="assertive" aria-atomic="true">
+            <div class="toast-header bg-white/5 text-text-primary border-white/10">
+                <i class="fas fa-info-circle me-2 text-accent-blue"></i>
                 <strong class="me-auto">WeatherDashboard</strong>
                 <small>Just now</small>
-                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"
+                    id="closeToast"></button>
             </div>
-            <div class="toast-body" id="toastMessage">
+            <div class="toast-body text-text-primary" id="toastMessage">
                 Weather data has been updated.
             </div>
         </div>
@@ -93,69 +106,61 @@
     <!-- Forecast modal -->
     <div class="modal fade" id="forecastModal" tabindex="-1" aria-labelledby="forecastTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
+            <div class="modal-content bg-secondary-dark text-text-primary border border-white/10">
+                <div class="modal-header border-white/10">
                     <h5 class="modal-title" id="forecastTitle">Weather Forecast</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+                        id="closeModal"></button>
                 </div>
                 <div class="modal-body">
                     <ul class="nav nav-tabs mb-4" id="forecastTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="temperature-tab" data-bs-toggle="tab"
-                                data-bs-target="#temperatureTab" type="button" role="tab" aria-controls="temperatureTab"
-                                aria-selected="true">
+                            <button class="nav-link active" data-tab="temperatureTab" type="button" role="tab">
                                 <i class="fas fa-temperature-high me-2"></i>Temperature
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="precipitation-tab" data-bs-toggle="tab"
-                                data-bs-target="#precipitationTab" type="button" role="tab"
-                                aria-controls="precipitationTab" aria-selected="false">
+                            <button class="nav-link" data-tab="precipitationTab" type="button" role="tab">
                                 <i class="fas fa-cloud-rain me-2"></i>Precipitation
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="wind-tab" data-bs-toggle="tab" data-bs-target="#windTab"
-                                type="button" role="tab" aria-controls="windTab" aria-selected="false">
+                            <button class="nav-link" data-tab="windTab" type="button" role="tab">
                                 <i class="fas fa-wind me-2"></i>Wind
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="humidity-tab" data-bs-toggle="tab"
-                                data-bs-target="#humidityTab" type="button" role="tab" aria-controls="humidityTab"
-                                aria-selected="false">
+                            <button class="nav-link" data-tab="humidityTab" type="button" role="tab">
                                 <i class="fas fa-tint me-2"></i>Humidity
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="forecastTabContent">
-                        <div class="tab-pane fade show active" id="temperatureTab" role="tabpanel"
-                            aria-labelledby="temperature-tab">
+                        <div class="tab-pane fade show active" id="temperatureTab" role="tabpanel">
                             <div class="chart-container">
                                 <canvas id="temperatureChart" height="250"></canvas>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="precipitationTab" role="tabpanel"
-                            aria-labelledby="precipitation-tab">
+                        <div class="tab-pane fade" id="precipitationTab" role="tabpanel">
                             <div class="chart-container">
                                 <canvas id="precipitationChart" height="250"></canvas>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="windTab" role="tabpanel" aria-labelledby="wind-tab">
+                        <div class="tab-pane fade" id="windTab" role="tabpanel">
                             <div class="chart-container">
                                 <canvas id="windChart" height="250"></canvas>
                             </div>
                         </div>
-                        <div class="tab-pane fade" id="humidityTab" role="tabpanel" aria-labelledby="humidity-tab">
+                        <div class="tab-pane fade" id="humidityTab" role="tabpanel">
                             <div class="chart-container">
                                 <canvas id="humidityChart" height="250"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <h6 class="mt-4 mb-3"><i class="fas fa-calendar-day me-2"></i>5-Day Forecast</h6>
-                    <div class="daily-forecast" id="dailyForecast">
+                    <h6 class="mt-4 mb-3 font-semibold"><i class="fas fa-calendar-day me-2"></i>5-Day Forecast</h6>
+                    <div class="daily-forecast grid grid-cols-5 gap-4" id="dailyForecast">
                         <!-- Daily forecast cards will be populated here -->
                     </div>
                 </div>
@@ -163,10 +168,34 @@
         </div>
     </div>
 
+    <!-- Map modal -->
+    <div class="modal fade" id="mapModal" tabindex="-1" aria-labelledby="mapModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content bg-secondary-dark text-text-primary border border-white/10">
+                <div class="modal-header border-white/10">
+                    <h5 class="modal-title" id="mapModalTitle">Location Map</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="mapContainer" class="h-[500px] w-full"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal backdrop -->
+    <div class="modal-backdrop hidden bg-black/50 fixed inset-0 z-40" id="modalBackdrop"></div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Modular JS Structure -->
     <script type="module" src="src/js/main.js"></script>

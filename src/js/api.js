@@ -16,14 +16,34 @@ function _memo(key, fetcher) {
   });
 }
 
-// Geocoding APIs
+// Improved geocoding that works for any search term
 export function geocode(query) {
   const url = `${BASE}/geo/1.0/direct?q=${encodeURIComponent(
     query
-  )}&limit=1&appid=${API_KEY}`;
+  )}&limit=5&appid=${API_KEY}`;
+
   return fetch(url)
-    .then((r) => r.json())
-    .then((a) => a[0] ?? null);
+    .then((r) => {
+      if (!r.ok) {
+        throw new Error(`Geocoding failed with status: ${r.status}`);
+      }
+      return r.json();
+    })
+    .then((results) => {
+      if (!results || results.length === 0) {
+        console.warn(`No locations found for query: ${query}`);
+        return [];
+      }
+      console.log(
+        `Found ${results.length} locations for query: ${query}`,
+        results
+      );
+      return results;
+    })
+    .catch((error) => {
+      console.error("Geocoding error:", error);
+      throw error;
+    });
 }
 
 export function reverseGeocode(lat, lon) {
@@ -64,7 +84,7 @@ export function airPollution(lat, lon) {
 // Find nearby cities
 export function findNearbyCities(lat, lon, count = 12) {
   return fetch(
-    `${BASE}/data/2.5/find?lat=${lat}&lon=${lon}&cnt=${count}&appid=${API_KEY}`
+    `${BASE}/data/2.5/find?lat=${lat}&lon=${lon}&cnt=${count}&units=metric&appid=${API_KEY}`
   ).then((r) => r.json());
 }
 

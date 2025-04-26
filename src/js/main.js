@@ -14,22 +14,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // Make dashboard accessible for debugging if needed
   window.weatherDashboard = dashboard;
 
-  // toggle‐handler
-  const toggleBtn = document.querySelector(".sidebar-toggle");
-  if (toggleBtn) {
-    toggleBtn.addEventListener("click", () => {
-      document.querySelector(".sidebar").classList.toggle("show");
-    });
-  }
+  // Initialize modal functionality
+  initModals();
 
-  //service worker registration
+  // Service worker registration
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("/sw.js")
+        .register("/serviceworker.js")
+        .then((registration) => {
+          console.log(
+            "Service Worker registered with scope:",
+            registration.scope
+          );
+        })
         .catch((err) => console.error("SW registration failed:", err));
     });
   }
 
-  console.log("WeatherHub initialized successfully");
+  console.log("WeatherDashboard initialized successfully");
 });
+
+// Initialize Bootstrap modals
+function initModals() {
+  // Ensure Bootstrap's modal backdrop works properly
+  const modals = document.querySelectorAll(".modal");
+  modals.forEach((modalEl) => {
+    modalEl.addEventListener("hidden.bs.modal", () => {
+      document.body.classList.remove("modal-open");
+      const backdrops = document.querySelectorAll(".modal-backdrop");
+      backdrops.forEach((backdrop) => backdrop.remove());
+    });
+  });
+}
