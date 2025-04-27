@@ -1,16 +1,10 @@
-import * as U from "./utils.js";
+// Handles UI rendering and interaction
 
-// Chart instances
-const charts = {
-  temperature: null,
-  precipitation: null,
-  wind: null,
-  humidity: null,
-};
-
-// Map instance
-let map = null;
-let mapMarkers = [];
+import * as F from "./formatting.js";
+import * as L from "./landmarks.js";
+import * as Map from "./map.js";
+import * as Charts from "./charts.js";
+import { iconBase } from "./landmarks.js";
 
 // Build a weather card for a city
 export function buildCityCard(city) {
@@ -25,7 +19,7 @@ export function buildCityCard(city) {
   card.innerHTML = `<div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-blue to-accent-purple z-10 transition-all duration-300 group-hover:h-1.5"></div>`;
 
   const data = city.weather;
-  const icon = `${U.iconBase}${data.weather[0].icon}@2x.png`;
+  const icon = `${iconBase}${data.weather[0].icon}@2x.png`;
   const temp = Math.round(data.main.temp);
   const feelsLike = Math.round(data.main.feels_like);
 
@@ -36,7 +30,7 @@ export function buildCityCard(city) {
   landmarkContainer.innerHTML = `
     <img src="${city.landmark}" class="w-full h-full object-cover transition-transform duration-500 hover:scale-105" 
          alt="${city.name}" 
-         onerror="this.src='${U.placeholderLandmark}';this.classList.add('error')">
+         onerror="this.src='${L.placeholderLandmark}';this.classList.add('error')">
     <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-white">
       <span class="text-lg font-semibold">${city.name}</span>
     </div>
@@ -61,7 +55,7 @@ export function buildCityCard(city) {
     <img src="${city.flag}" class="w-6 h-4 rounded shadow" alt="${
     city.country
   } flag" 
-         onerror="this.src='${U.placeholderFlag}';this.classList.add('error')">
+         onerror="this.src='${L.placeholderFlag}';this.classList.add('error')">
   `;
 
   // Country name
@@ -93,17 +87,21 @@ export function buildCityCard(city) {
     </div>
     <div class="flex flex-col gap-1">
       <span class="text-text-secondary text-xs uppercase tracking-wider">Humidity</span>
-      <span class="font-medium text-lg">${data.main.humidity}%</span>
+      <span class="font-medium text-lg">${F.formatHumidity(
+        data.main.humidity
+      )}</span>
     </div>
     <div class="flex flex-col gap-1">
       <span class="text-text-secondary text-xs uppercase tracking-wider">Wind</span>
-      <span class="font-medium text-lg">${Math.round(
+      <span class="font-medium text-lg">${F.formatWindSpeed(
         data.wind.speed
-      )} m/s ${U.getWindDirection(data.wind.deg)}</span>
+      )} ${F.getWindDirection(data.wind.deg)}</span>
     </div>
     <div class="flex flex-col gap-1">
       <span class="text-text-secondary text-xs uppercase tracking-wider">Pressure</span>
-      <span class="font-medium text-lg">${data.main.pressure} hPa</span>
+      <span class="font-medium text-lg">${F.formatPressure(
+        data.main.pressure
+      )}</span>
     </div>
     
     <div class="col-span-2 flex justify-between border-t border-white/10 pt-3 mt-2">
@@ -177,546 +175,44 @@ export function toast(message) {
   bsToast.show();
 }
 
-// Process forecast data
+// Process forecast data - now delegated to Charts module
 export function processForecastData(forecast) {
-  // Group by date (one entry per day)
-  const groupedByDate = {};
-  const hourlyData = {};
-
-  forecast.list.forEach((item) => {
-    const date = item.dt_txt.split(" ")[0];
-    const hour = item.dt_txt.split(" ")[1].slice(0, 5);
-
-    // Store hourly data
-    if (!hourlyData[date]) {
-      hourlyData[date] = [];
-    }
-
-    hourlyData[date].push({
-      hour,
-      temp: Math.round(item.main.temp),
-      precipitation: item.rain ? item.rain["3h"] || 0 : 0,
-      windSpeed: Math.round(item.wind.speed),
-      windDirection: item.wind.deg,
-      humidity: item.main.humidity,
-      weather: item.weather[0],
-      icon: item.weather[0].icon,
-    });
-
-    // For daily summary, use noon data or last entry of the day
-    if (item.dt_txt.includes("12:00:00") || !groupedByDate[date]) {
-      groupedByDate[date] = {
-        temp: Math.round(item.main.temp),
-        precipitation: item.rain ? item.rain["3h"] || 0 : 0,
-        windSpeed: Math.round(item.wind.speed),
-        humidity: item.main.humidity,
-        weather: item.weather[0],
-        icon: item.weather[0].icon,
-      };
-    }
-  });
-
-  return {
-    daily: Object.entries(groupedByDate).map(([date, data]) => ({
-      date,
-      ...data,
-    })),
-    hourly: hourlyData,
-  };
+  return Charts.processForecastData(forecast);
 }
 
-// Draw temperature chart
+// Draw temperature chart - now delegated to Charts module
 export function drawTemperatureChart(data) {
-  // Get the first 5 days of hourly data
-  const days = Object.keys(data.hourly).slice(0, 5);
-  const datasets = [];
-
-  // Create a dataset for each day
-  days.forEach((day, index) => {
-    const dayData = data.hourly[day];
-    const formattedDay = new Date(day).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-
-    // Map temperature data for each hour
-    const tempData = dayData.map((hourData) => ({
-      x: hourData.hour,
-      y: hourData.temp,
-    }));
-
-    // Add dataset for this day
-    datasets.push({
-      label: formattedDay,
-      data: tempData,
-      borderColor: U.getChartColor(index),
-      backgroundColor: U.getChartColor(index),
-      tension: 0.3,
-      pointBackgroundColor: U.getChartColor(index),
-      pointRadius: 4,
-    });
-  });
-
-  // Destroy previous chart if exists
-  if (charts.temperature) {
-    charts.temperature.destroy();
-  }
-
-  // Create new chart
-  const ctx = document.getElementById("temperatureChart");
-  if (!ctx) return null;
-
-  const context = ctx.getContext("2d");
-  charts.temperature = new Chart(context, {
-    type: "line",
-    data: {
-      datasets: datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          position: "top",
-          labels: {
-            color: "rgba(255, 255, 255, 0.7)",
-            usePointStyle: true,
-          },
-        },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
-          callbacks: {
-            label: function (context) {
-              return `${context.dataset.label}: ${context.parsed.y}°C`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Hour",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        y: {
-          title: {
-            display: true,
-            text: "Temperature (°C)",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-            callback: function (value) {
-              return value + "°C";
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return charts.temperature;
+  return Charts.drawTemperatureChart(data);
 }
 
-// Draw precipitation chart
+// Draw precipitation chart - now delegated to Charts module
 export function drawPrecipitationChart(data) {
-  // Get the first 5 days
-  const days = Object.keys(data.hourly).slice(0, 5);
-  const labels = [];
-  const precipData = [];
-
-  // Prepare data for each day
-  days.forEach((day) => {
-    const formattedDay = new Date(day).toLocaleDateString("en-US", {
-      weekday: "short",
-    });
-    const dayData = data.hourly[day];
-
-    // Calculate total precipitation for the day
-    const totalPrecip = dayData.reduce(
-      (sum, hour) => sum + hour.precipitation,
-      0
-    );
-
-    labels.push(formattedDay);
-    precipData.push(Math.round(totalPrecip * 10) / 10); // Round to 1 decimal place
-  });
-
-  // Destroy previous chart if exists
-  if (charts.precipitation) {
-    charts.precipitation.destroy();
-  }
-
-  // Create new chart
-  const ctx = document.getElementById("precipitationChart");
-  if (!ctx) return null;
-
-  const context = ctx.getContext("2d");
-  charts.precipitation = new Chart(context, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Precipitation (mm)",
-          data: precipData,
-          backgroundColor: "rgba(59, 130, 246, 0.7)",
-          borderColor: "rgba(59, 130, 246, 1)",
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top",
-          labels: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
-          callbacks: {
-            label: function (context) {
-              return `${context.parsed.y} mm`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "Precipitation (mm)",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-            callback: function (value) {
-              return value + " mm";
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return charts.precipitation;
+  return Charts.drawPrecipitationChart(data);
 }
 
-// Draw wind chart
+// Draw wind chart - now delegated to Charts module
 export function drawWindChart(data) {
-  // Get the first 5 days
-  const days = Object.keys(data.hourly).slice(0, 5);
-  const labels = [];
-  const windData = [];
-
-  // Prepare data for each day
-  days.forEach((day) => {
-    const formattedDay = new Date(day).toLocaleDateString("en-US", {
-      weekday: "short",
-    });
-    const dayData = data.hourly[day];
-
-    // Calculate average wind speed for the day
-    const totalWind = dayData.reduce((sum, hour) => sum + hour.windSpeed, 0);
-    const avgWind = Math.round((totalWind / dayData.length) * 10) / 10;
-
-    labels.push(formattedDay);
-    windData.push(avgWind);
-  });
-
-  // Destroy previous chart if exists
-  if (charts.wind) {
-    charts.wind.destroy();
-  }
-
-  // Create new chart
-  const ctx = document.getElementById("windChart");
-  if (!ctx) return null;
-
-  const context = ctx.getContext("2d");
-  charts.wind = new Chart(context, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: "Wind Speed (m/s)",
-          data: windData,
-          backgroundColor: "rgba(139, 92, 246, 0.7)",
-          borderColor: "rgba(139, 92, 246, 1)",
-          borderWidth: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: "top",
-          labels: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
-          callbacks: {
-            label: function (context) {
-              return `${context.parsed.y} m/s`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "Wind Speed (m/s)",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-            callback: function (value) {
-              return value + " m/s";
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return charts.wind;
+  return Charts.drawWindChart(data);
 }
 
-// Draw humidity chart
+// Draw humidity chart - now delegated to Charts module
 export function drawHumidityChart(data) {
-  // Get the first 5 days
-  const days = Object.keys(data.hourly).slice(0, 5);
-  const datasets = [];
-
-  // Create a dataset for each day
-  days.forEach((day, index) => {
-    const dayData = data.hourly[day];
-    const formattedDay = new Date(day).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-
-    // Map humidity data for each hour
-    const humidityData = dayData.map((hourData) => ({
-      x: hourData.hour,
-      y: hourData.humidity,
-    }));
-
-    // Add dataset for this day
-    datasets.push({
-      label: formattedDay,
-      data: humidityData,
-      borderColor: U.getChartColor(index),
-      backgroundColor: U.getChartColor(index),
-      tension: 0.3,
-      pointBackgroundColor: U.getChartColor(index),
-      pointRadius: 4,
-    });
-  });
-
-  // Destroy previous chart if exists
-  if (charts.humidity) {
-    charts.humidity.destroy();
-  }
-
-  // Create new chart
-  const ctx = document.getElementById("humidityChart");
-  if (!ctx) return null;
-
-  const context = ctx.getContext("2d");
-  charts.humidity = new Chart(context, {
-    type: "line",
-    data: {
-      datasets: datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        mode: "index",
-        intersect: false,
-      },
-      plugins: {
-        legend: {
-          position: "top",
-          labels: {
-            color: "rgba(255, 255, 255, 0.7)",
-            usePointStyle: true,
-          },
-        },
-        tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.8)",
-          callbacks: {
-            label: function (context) {
-              return `${context.dataset.label}: ${context.parsed.y}%`;
-            },
-          },
-        },
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: "Hour",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-        },
-        y: {
-          min: 0,
-          max: 100,
-          title: {
-            display: true,
-            text: "Humidity (%)",
-            color: "rgba(255, 255, 255, 0.7)",
-          },
-          grid: {
-            color: "rgba(255, 255, 255, 0.1)",
-          },
-          ticks: {
-            color: "rgba(255, 255, 255, 0.7)",
-            callback: function (value) {
-              return value + "%";
-            },
-          },
-        },
-      },
-    },
-  });
-
-  return charts.humidity;
+  return Charts.drawHumidityChart(data);
 }
 
-// Render 5-day forecast
+// Render daily forecast - now delegated to Charts module
 export function renderDailyForecast(data) {
-  const dailyForecastElement = document.getElementById("dailyForecast");
-  if (!dailyForecastElement) return;
-
-  dailyForecastElement.innerHTML = "";
-
-  // Create a card for each day (limit to 5 days)
-  data.daily.slice(0, 5).forEach((day) => {
-    const date = new Date(day.date);
-    const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
-    const monthDay = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-
-    const dayCard = document.createElement("div");
-    dayCard.className =
-      "bg-white/5 rounded-lg p-4 text-center transition-all duration-300 hover:bg-white/10 hover:-translate-y-1 hover:shadow-lg";
-    dayCard.innerHTML = `
-      <div class="font-semibold">${dayName}</div>
-      <div class="text-sm text-text-secondary">${monthDay}</div>
-      <img src="${U.iconBase}${day.icon}@2x.png" class="w-12 h-12 mx-auto my-2" alt="${day.weather.description}">
-      <div class="text-xl font-bold my-2">${day.temp}°C</div>
-      <div class="text-sm text-text-secondary">${day.weather.description}</div>
-      <div class="mt-2 text-xs text-text-secondary">
-        <span class="block"><i class="fas fa-wind mr-1"></i> ${day.windSpeed} m/s</span>
-        <span class="block"><i class="fas fa-tint mr-1"></i> ${day.humidity}%</span>
-      </div>
-    `;
-
-    dailyForecastElement.appendChild(dayCard);
-  });
+  return Charts.renderDailyForecast(data, iconBase);
 }
 
-// Switch between tabs in the forecast modal
+// Switch between tabs - now delegated to Charts module
 export function switchTab(tabName) {
-  // Update active tab button
-  const tabButtons = document.querySelectorAll("[data-tab]");
-  tabButtons.forEach((btn) => {
-    const isActive = btn.getAttribute("data-tab") === tabName;
-    btn.classList.toggle("active", isActive);
-    btn.classList.toggle("text-accent-blue", isActive);
-    btn.classList.toggle("border-b-2", isActive);
-    btn.classList.toggle("border-accent-blue", isActive);
-    btn.classList.toggle("text-text-secondary", !isActive);
-    btn.classList.toggle("border-transparent", !isActive);
-  });
-
-  // Update visible tab content
-  document.querySelectorAll(".tab-pane").forEach((content) => {
-    if (content.id === tabName) {
-      content.classList.add("show", "active");
-      content.classList.remove("hidden");
-    } else {
-      content.classList.remove("show", "active");
-      content.classList.add("hidden");
-    }
-  });
+  return Charts.switchTab(tabName);
 }
 
-// Clean up chart resources
+// Clean up chart resources - now delegated to Charts module
 export function destroyCharts() {
-  Object.values(charts).forEach((chart) => {
-    if (chart) {
-      chart.destroy();
-    }
-  });
-
-  // Reset chart instances
-  charts.temperature = null;
-  charts.precipitation = null;
-  charts.wind = null;
-  charts.humidity = null;
+  return Charts.destroyCharts();
 }
 
 // Modal control
@@ -745,74 +241,15 @@ export function hideModal(modalId) {
   }
 }
 
-// Map handling - Fixed to ensure proper English display and correct location
+// Map handling - now delegated to Map module
 export function initMap(city) {
-  const mapContainer = document.getElementById("mapContainer");
-  if (!mapContainer) return;
-
-  // Clear any existing map
-  mapContainer.innerHTML = "";
-  clearMapMarkers();
-
-  // Initialize the map if not already
-  if (!map) {
-    map = L.map("mapContainer").setView([city.lat, city.lon], 10);
-
-    // Add tile layer with language=en parameter to ensure English names
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 19,
-      language: "en",
-    }).addTo(map);
-  } else {
-    // Just update the view if map exists
-    map.setView([city.lat, city.lon], 10);
-  }
-
-  // Add marker for the city with accurate coordinates
-  const marker = L.marker([city.lat, city.lon]).addTo(map);
-
-  // Add popup with city info
-  marker.bindPopup(U.getMapPopupContent(city)).openPopup();
-
-  // Add to markers array for later cleanup
-  mapMarkers.push(marker);
-
-  // Force map to update size (needed after modal opens)
-  setTimeout(() => {
-    map.invalidateSize();
-  }, 300);
+  return Map.initMap(city);
 }
 
 export function addMapMarkers(cities) {
-  if (!map) return;
-
-  // Clear existing markers
-  clearMapMarkers();
-
-  // Add a marker for each city
-  cities.forEach((city) => {
-    const marker = L.marker([city.lat, city.lon]).addTo(map);
-    marker.bindPopup(U.getMapPopupContent(city));
-    mapMarkers.push(marker);
-  });
-
-  // Fit map to show all markers
-  if (mapMarkers.length > 1) {
-    const group = new L.featureGroup(mapMarkers);
-    map.fitBounds(group.getBounds().pad(0.1));
-  }
+  return Map.addMapMarkers(cities);
 }
 
 export function clearMapMarkers() {
-  if (!map) return;
-
-  // Remove all markers from the map
-  mapMarkers.forEach((marker) => {
-    map.removeLayer(marker);
-  });
-
-  // Clear the markers array
-  mapMarkers = [];
+  return Map.clearMapMarkers();
 }

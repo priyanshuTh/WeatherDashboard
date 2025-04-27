@@ -1,6 +1,11 @@
 import * as API from "./api.js";
-import * as U from "./utils.js";
 import * as UI from "./ui.js";
+import * as Charts from "./charts.js";
+import * as Map from "./map.js";
+import * as F from "./formatting.js";
+import * as L from "./landmarks.js";
+import * as Storage from "./storage.js";
+import * as Utils from "./utils.js";
 
 export class WeatherDashboard {
   constructor(gridEl) {
@@ -39,7 +44,10 @@ export class WeatherDashboard {
     this.#showLoading();
 
     // Load recent searches from localStorage
-    this.recentSearches = U.getFromLocalStorage("weatherRecentSearches", []);
+    this.recentSearches = Storage.getFromLocalStorage(
+      "weatherRecentSearches",
+      []
+    );
     this.#renderRecentSearches();
 
     // Set up event listeners
@@ -144,7 +152,7 @@ export class WeatherDashboard {
       tabButtons.forEach((btn) => {
         btn.addEventListener("click", (event) => {
           const tabTarget = event.currentTarget.getAttribute("data-tab");
-          UI.switchTab(tabTarget);
+          Charts.switchTab(tabTarget);
         });
       });
     }
@@ -276,13 +284,13 @@ export class WeatherDashboard {
       }
 
       const countryCode = weatherData.sys.country.toLowerCase();
-      const countryName = U.displayName(weatherData.sys.country);
+      const countryName = F.displayName(weatherData.sys.country);
 
       // Get a landmark image for the city
-      const landmark = U.getLandmarkForCity(city.name);
+      const landmark = L.getLandmarkForCity(city.name);
 
       // Check if it's a capital city
-      const isCapital = U.isCapitalCity(city.name, weatherData.sys.country);
+      const isCapital = L.isCapitalCity(city.name, weatherData.sys.country);
 
       // Create a city object for our cities array
       const cityObject = {
@@ -292,15 +300,15 @@ export class WeatherDashboard {
         countryCode: weatherData.sys.country,
         lat: city.lat,
         lon: city.lon,
-        flag: `${U.flagBase}${countryCode}.svg`,
+        flag: `${L.flagBase}${countryCode}.svg`,
         landmark: landmark,
         isCapital: isCapital,
         weather: weatherData,
-        sunrise: U.formatTime(
+        sunrise: F.formatTime(
           weatherData.sys.sunrise * 1000,
           weatherData.timezone
         ),
-        sunset: U.formatTime(
+        sunset: F.formatTime(
           weatherData.sys.sunset * 1000,
           weatherData.timezone
         ),
@@ -309,7 +317,9 @@ export class WeatherDashboard {
       // Add to cities array if not already present
       const existingCityIndex = this.cities.findIndex(
         (c) =>
-          c.name === cityObject.name && c.countryCode === cityObject.countryCode
+          c &&
+          c.name === cityObject.name &&
+          c.countryCode === cityObject.countryCode
       );
 
       if (existingCityIndex === -1) {
@@ -417,7 +427,7 @@ export class WeatherDashboard {
   #removeRecentSearch(index) {
     if (index >= 0 && index < this.recentSearches.length) {
       const removed = this.recentSearches.splice(index, 1)[0];
-      U.saveToLocalStorage("weatherRecentSearches", this.recentSearches);
+      Storage.saveToLocalStorage("weatherRecentSearches", this.recentSearches);
       this.#renderRecentSearches();
       UI.toast(`Removed "${removed.name}" from recent searches`);
     }
@@ -439,19 +449,19 @@ export class WeatherDashboard {
       }
 
       // Process data for charts
-      const processedData = UI.processForecastData(forecastData);
+      const processedData = Charts.processForecastData(forecastData);
 
       // Draw charts
-      UI.drawTemperatureChart(processedData);
-      UI.drawPrecipitationChart(processedData);
-      UI.drawWindChart(processedData);
-      UI.drawHumidityChart(processedData);
+      Charts.drawTemperatureChart(processedData);
+      Charts.drawPrecipitationChart(processedData);
+      Charts.drawWindChart(processedData);
+      Charts.drawHumidityChart(processedData);
 
       // Render daily forecast cards
-      UI.renderDailyForecast(processedData);
+      Charts.renderDailyForecast(processedData, L.iconBase);
 
       // Show temperature tab by default
-      UI.switchTab("temperatureTab");
+      Charts.switchTab("temperatureTab");
     } catch (err) {
       this.#showError("Could not load forecast. Please try again later.");
       console.error("Forecast error:", err);
@@ -466,7 +476,7 @@ export class WeatherDashboard {
 
       // Initialize the map with the city location
       setTimeout(() => {
-        UI.initMap(city);
+        Map.initMap(city);
       }, 300);
     } catch (err) {
       this.#showError("Could not load map. Please try again later.");
@@ -591,7 +601,10 @@ export class WeatherDashboard {
           }
 
           // Save to localStorage
-          U.saveToLocalStorage("weatherRecentSearches", this.recentSearches);
+          Storage.saveToLocalStorage(
+            "weatherRecentSearches",
+            this.recentSearches
+          );
 
           // Update UI
           this.#renderRecentSearches();
