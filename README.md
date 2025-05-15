@@ -1,6 +1,6 @@
 # WeatherDashboard
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg) ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![License: MIT](LICENSE)(https://img.shields.io/badge/License-MIT-blue.svg) ![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
 
 **Global Weather Dashboard** for real‑time conditions and 5‑day forecasts across the world.
 
@@ -106,7 +106,7 @@ Thank you for your contributions! 🎉
 
 ## 📝 License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+This project is licensed under the **MIT License**. See [LICENSE:MIT](LICENSE) for details.
 
 ---
 
