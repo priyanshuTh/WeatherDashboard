@@ -112,4 +112,4 @@ This project is licensed under the **MIT License**. See [LICENSE:MIT](LICENSE) f
 
 ## ✉️ Contact
 
-Created by [priyanshuTh](https://github.com/priyanshuTh). Questions or suggestions? Open an issue or [email](priyanshuthakur922@gmail.com).
+Created by [priyanshuTh](https://github.com/priyanshuTh). Questions or suggestions? Open an **issue** or **Email** priyanshuthakur922@gmail.com
