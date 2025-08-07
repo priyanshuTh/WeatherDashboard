@@ -40,7 +40,7 @@
 
 1. **Clone the repo**:
    ```bash
-   git clone https://github.com/priyanshuTh/WeatherHub.git
+   git clone https://github.com/priyanshuTh/WeatherDashboard.git
    cd weatherDashboard
    ```
 2. **Configure API Key**:
